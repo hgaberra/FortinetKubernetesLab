@@ -1,0 +1,1707 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "(v1.0) AWS CFT to deploy a VPC with 2 subnets (Public, Private) across 2x Availability Zones.",
+	"Metadata": {
+		"AWS::CloudFormation::Interface": {
+			"ParameterGroups": [
+				{
+					"Label": {
+						"default": "VPC Configuration"
+					},
+					"Parameters": [
+						"VPCCIDR",
+						"AZForSubnet1",
+						"AZForSubnet2",
+						"PublicSubnet1",
+						"PrivateSubnet1",
+						"PublicSubnet2",
+						"PrivateSubnet2"
+					]
+				},
+				{
+					"Label": {
+						"default": "FortiGate Instance Configuration"
+					},
+					"Parameters": [
+						"FortiGateInstanceType",
+						"CIDRForInstanceAccess",
+						"KeyPair",
+						"EncryptVolumes",
+						"InitS3Bucket",
+						"FortiGateLicenseType",
+						"FortiGateLicenseFile"
+					]
+				},
+				{
+					"Label": {
+						"default": "FortiADC Instance Configuration"
+					},
+					"Parameters": [
+						"FortiADCInstanceType",
+						"FortiADCLicenseType"
+					]
+				},
+				{
+					"Label": {
+						"default": "Kubernetes Instance Configuration"
+					},
+					"Parameters": [
+						"K8sInstanceType"
+					]
+				}
+			]
+		}
+	},
+	"Parameters": {
+		"VPCCIDR": {
+			"Type": "String",
+			"Default": "10.0.0.0/16",
+			"Description": "Provide a network CIDR for the VPC"
+		},
+		"AZForSubnet1": {
+			"Type": "AWS::EC2::AvailabilityZone::Name",
+			"Description": "Select an Availability Zone for the first set of subnets"
+		},
+		"AZForSubnet2": {
+			"Type": "AWS::EC2::AvailabilityZone::Name",
+			"Description": "Select an Availability Zone for the second set of subnets"
+		},
+		"PublicSubnet1": {
+			"Type": "String",
+			"Default": "10.0.1.0/24",
+			"Description": "Provide a network CIDR for PublicSubnet1"
+		},
+		"PrivateSubnet1": {
+			"Type": "String",
+			"Default": "10.0.3.0/24",
+			"Description": "Provide a network CIDR for PrivateSubnet1"
+		},
+		"PublicSubnet2": {
+			"Type": "String",
+			"Default": "10.0.2.0/24",
+			"Description": "Provide a network CIDR for PublicSubnet2"
+		},
+		"PrivateSubnet2": {
+			"Type": "String",
+			"Default": "10.0.4.0/24",
+			"Description": "Provide a network CIDR for PrivateSubnet2"
+		},
+		"FortiGateInstanceType": {
+			"Type": "String",
+			"Default": "c5.large",
+			"Description": "Select the instance type for the FortiGate",
+			"AllowedValues": [
+				"c5.large",
+				"c5.xlarge",
+				"c5.2xlarge",
+				"c5.4xlarge",
+				"c5.9xlarge",
+				"c5.18xlarge",
+				"c5n.xlarge",
+				"c5n.2xlarge",
+				"c5n.4xlarge",
+				"c5n.9xlarge",
+				"c5n.18xlarge"
+			]
+		},
+		"CIDRForInstanceAccess": {
+			"Type": "String",
+			"Default": "0.0.0.0/0",
+			"Description": "Provide a network CIDR from which the FortiGate instances will be accessed"
+		},
+		"KeyPair": {
+			"Type": "AWS::EC2::KeyPair::KeyName",
+			"Description": "Select a keypair to associate with the FortiGate"
+		},
+		"EncryptVolumes": {
+			"Type": "String",
+			"Description": "Select 'true' to encrypt the FortiGate instances OS and Log volumes with your account's KMS default master key for EBS.  Otherwise select false to leave unencrypted",
+			"Default": "false",
+			"AllowedValues": [
+				"true",
+				"false"
+			]
+		},
+		"InitS3Bucket": {
+			"Type": "String",
+			"MinLength": "1",
+			"Description": "Provide the Init S3 Bucket name, where your config files will be created  *** the bucket should exist in the same region as this deployment for successful bootstrapping ***"
+		},
+		"FortiGateLicenseType": {
+			"Type": "String",
+			"Description": "Select the license type for the FortiGate",
+			"AllowedValues": [
+				"PAYG",
+				"BYOL"
+			]
+		},
+		"FortiGateLicenseFile": {
+			"Type": "String",
+			"Description": "[BYOL Only, leave blank for PAYG] Provide the name of the BYOL license file in the Init S3 Bucket for the FortiGate (ie Fgt.lic or prefix/Fgt.lic)"
+		},
+		"FortiADCInstanceType": {
+			"Type": "String",
+			"Default": "c5.large",
+			"Description": "Select the instance type for the FortiADC",
+			"AllowedValues": [
+				"c5.large",
+				"c5.xlarge",
+				"c5.2xlarge",
+				"c5.4xlarge",
+				"c5.9xlarge",
+				"c5.18xlarge",
+				"c5n.xlarge",
+				"c5n.2xlarge",
+				"c5n.4xlarge",
+				"c5n.9xlarge",
+				"c5n.18xlarge"
+			]
+		},
+		"FortiADCLicenseType": {
+			"Type": "String",
+			"Description": "Select the license type for the FortiADC",
+			"AllowedValues": [
+				"PAYG",
+				"BYOL"
+			]
+		},
+		"K8sInstanceType": {
+			"Type": "String",
+			"Default": "c5.xlarge",
+			"Description": "Select the instance type for the Kubernetes nodes",
+			"AllowedValues": [
+				"c5.large",
+				"c5.xlarge",
+				"c5.2xlarge",
+				"c5.4xlarge",
+				"c5.9xlarge",
+				"c5.18xlarge",
+				"c5n.xlarge",
+				"c5n.2xlarge",
+				"c5n.4xlarge",
+				"c5n.9xlarge",
+				"c5n.18xlarge"
+			]
+		}
+	},
+	"Conditions": {
+		"FortiGateLicenseTypeBYOL": {
+			"Fn::Equals": [
+				{
+					"Ref": "FortiGateLicenseType"
+				},
+				"BYOL"
+			]
+		},
+		"FortiADCLicenseTypeBYOL": {
+			"Fn::Equals": [
+				{
+					"Ref": "FortiGateLicenseType"
+				},
+				"BYOL"
+			]
+		}
+	},
+	"Resources": {
+		"VPCID": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "VPCCIDR"
+				},
+				"EnableDnsSupport": "true",
+				"EnableDnsHostnames": "true",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"VPC"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"PublicSub1": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"CidrBlock": {
+					"Ref": "PublicSubnet1"
+				},
+				"AvailabilityZone": {
+					"Ref": "AZForSubnet1"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PublicSubnet1"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"PrivateSub1": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"CidrBlock": {
+					"Ref": "PrivateSubnet1"
+				},
+				"AvailabilityZone": {
+					"Ref": "AZForSubnet1"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PrivateSubnet1"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"PublicSub2": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"CidrBlock": {
+					"Ref": "PublicSubnet2"
+				},
+				"AvailabilityZone": {
+					"Ref": "AZForSubnet2"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PublicSubnet2"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"PrivateSub2": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"CidrBlock": {
+					"Ref": "PrivateSubnet2"
+				},
+				"AvailabilityZone": {
+					"Ref": "AZForSubnet2"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PrivateSubnet2"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"InternetGateway": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"IGW"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"AttachGateway": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"InternetGatewayId": {
+					"Ref": "InternetGateway"
+				}
+			}
+		},
+		"PublicRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PublicRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"PrivateRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PrivateRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"Route1": {
+			"Type": "AWS::EC2::Route",
+			"DependsOn": "AttachGateway",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "PublicRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "InternetGateway"
+				}
+			}
+		},
+		"Route2": {
+			"Type": "AWS::EC2::Route",
+			"DependsOn": "FgtEni1",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"NetworkInterfaceId": {
+					"Ref": "FgtEni1"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation1": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PublicSub1"
+				},
+				"RouteTableId": {
+					"Ref": "PublicRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation2": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PublicSub2"
+				},
+				"RouteTableId": {
+					"Ref": "PublicRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation3": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSub1"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation4": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSub2"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"InstanceRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"ec2.amazonaws.com"
+								]
+							},
+							"Action": [
+								"sts:AssumeRole"
+							]
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "FGCPPolicy",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"ec2:Describe*",
+										"ec2:AssociateAddress",
+										"ec2:AssignPrivateIpAddresses",
+										"ec2:UnassignPrivateIpAddresses",
+										"ec2:ReplaceRoute",
+										"eks:DescribeCluster",
+										"eks:ListClusters",
+										"inspector:DescribeFindings",
+										"inspector:ListFindings",
+										"s3:GetObject"
+									],
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"InstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [
+					{
+						"Ref": "InstanceRole"
+					}
+				]
+			}
+		},
+		"SecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"GroupDescription": "SecurityGroup",
+				"SecurityGroupIngress": [
+					{
+						"Description": "Allow remote access",
+						"IpProtocol": "-1",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow local VPC access",
+						"IpProtocol": "-1",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Ref": "VPCCIDR"
+						}
+					}
+				]
+			}
+		},
+		"SecurityGroupRule": {
+			"DependsOn": "SecurityGroup",
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "SecurityGroup"
+				},
+				"Description": "Allow instances to access each other",
+				"IpProtocol": "-1",
+				"FromPort": "0",
+				"ToPort": "65535",
+				"SourceSecurityGroupId": {
+					"Ref": "SecurityGroup"
+				}
+			}
+		},
+		"Fgt": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction1",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "FortiGateInstanceType"
+				},
+				"IamInstanceProfile": {
+					"Ref": "InstanceProfile"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"BlockDeviceMappings": [
+					{
+						"DeviceName": "/dev/sda1",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "2",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					},
+					{
+						"DeviceName": "/dev/sdb",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "30",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					}
+				],
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "FgtEni0"
+						},
+						"DeviceIndex": "0"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "FgtEni1"
+						},
+						"DeviceIndex": "1"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FortiGate"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"",
+							[
+								"{\n",
+								"\"bucket\"",
+								" : \"",
+								{
+									"Ref": "InitS3Bucket"
+								},
+								"\"",
+								",\n",
+								"\"region\"",
+								" : ",
+								"\"",
+								{
+									"Ref": "AWS::Region"
+								},
+								"\"",
+								",\n",
+								"\"license\"",
+								" : ",
+								"\"",
+								"/",
+								{
+									"Ref": "FortiGateLicenseFile"
+								},
+								"\"",
+								",\n",
+								"\"config\"",
+								" : ",
+								"\"",
+								"/Fgt.txt\"",
+								"\n",
+								"}"
+							]
+						]
+					}
+				}
+			}
+		},
+		"FgtEni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "SecurityGroup"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PublicSub1"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FgtEni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				]
+			}
+		},
+		"FgtEni1": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port2",
+				"GroupSet": [
+					{
+						"Ref": "SecurityGroup"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PrivateSub1"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FgtEni1"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth1"
+					}
+				]
+			}
+		},
+		"FgtEIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc"
+			}
+		},
+		"FgtEIPASSOCIATION": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"FgtEIP",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "FgtEni0"
+				}
+			},
+			"DependsOn": "FgtEIP"
+		},
+		"Fadc": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction3",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "FortiADCInstanceType"
+				},
+				"IamInstanceProfile": {
+					"Ref": "InstanceProfile"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"BlockDeviceMappings": [
+					{
+						"DeviceName": "/dev/sda1",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "2",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					},
+					{
+						"DeviceName": "/dev/sdb",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "30",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					}
+				],
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "FadcEni0"
+						},
+						"DeviceIndex": "0"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "FadcEni1"
+						},
+						"DeviceIndex": "1"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FortiADC"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"FadcEni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "SecurityGroup"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PublicSub2"
+				},
+				"SecondaryPrivateIpAddressCount": 1,
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FadcEni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				]
+			}
+		},
+		"FadcEni1": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port2",
+				"GroupSet": [
+					{
+						"Ref": "SecurityGroup"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PrivateSub2"
+				},
+				"SecondaryPrivateIpAddressCount": 1,
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FadcEni1"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth1"
+					}
+				]
+			}
+		},
+		"FadcEIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc"
+			}
+		},
+		"FadcEIPASSOCIATION": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"FadcEIP",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "FadcEni0"
+				}
+			},
+			"DependsOn": "FadcEIP"
+		},
+		"FadcEIP2": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc"
+			}
+		},
+		"Fadc2EIPASSOCIATION": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"FadcEIP2",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "FadcEni0"
+				},
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::GetAtt": [
+								"FadcEni0",
+								"SecondaryPrivateIpAddresses"
+							]
+						}
+					]
+				}
+			},
+			"DependsOn": "FadcEIP"
+		},
+		"K8sMaster": {
+			"Type": "AWS::EC2::Instance",
+			"DependsOn": "Fgt",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction2",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "K8sInstanceType"
+				},
+				"IamInstanceProfile": {
+					"Ref": "InstanceProfile"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "K8sMasterEni0"
+						},
+						"DeviceIndex": "0"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-K8sMaster"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"\n",
+							[
+								"#!/bin/bash",
+								"echo '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-'",
+								"echo '-=-=-=-=-=- beginning of script -=-=-=-=-=-'",
+								"echo '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-'",
+								"echo 'sleeping for 3 minutes, waiting on fgt to be ready'",
+								"sleep 180",
+								"sudo swapoff -a",
+								"echo 90 > /proc/sys/vm/swappiness ",
+								"sudo apt-get -y update",
+								"sudo apt-get install -y net-tools docker.io apt-transport-https ca-certificates curl",
+								"sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg",
+								"echo 'deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main' | sudo tee /etc/apt/sources.list.d/kubernetes.list",
+								"sudo apt-get -y update",
+								"sudo apt-get install -y kubelet=1.20.8-00 kubeadm=1.20.8-00 kubectl=1.20.8-00",
+								"sudo apt-mark hold kubelet kubeadm kubectl",
+								"sudo kubeadm init --pod-network-cidr=192.168.0.0/16",
+								"sudo mkdir -p /root/.kube",
+								"sudo cp -i /etc/kubernetes/admin.conf /root/.kube/config",
+								"sudo chown $(id -u):$(id -g) /root/.kube/config",
+								"mkdir -p /home/ubuntu/.kube",
+								"sudo cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config",
+								"sudo chown $(id -u ubuntu):$(id -g ubuntu) /home/ubuntu/.kube/config",
+								"echo 'sleeping for 30 seconds, waiting on core k8s to be ready'",
+								"sleep 30",
+								"sudo kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml",
+								"curl https://docs.projectcalico.org/manifests/custom-resources.yaml --output custom-resources.yaml",
+								"sed -i 's/VXLANCrossSubnet/VXLAN/g' custom-resources.yaml",
+								"sudo kubectl create -f custom-resources.yaml",
+								"echo 'sleeping for 30 seconds, waiting on calico to be ready'",
+								"sleep 30",
+								"cd /home/ubuntu",
+								"curl -o calicoctl -O -L  'https://github.com/projectcalico/calicoctl/releases/download/v3.19.1/calicoctl'",
+								"chmod +x calicoctl",
+								"cp calicoctl /usr/local/bin/",
+								"sudo apt-get install -y apache2 unzip",
+								"sudo kubeadm token list -o jsonpath='{.token}' | sudo tee /var/www/html/token",
+								"openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //' | sudo tee /var/www/html/hash",
+								"sudo cat /etc/kubernetes/admin.conf | sudo tee /var/www/html/config",
+								"curl https://hacorp-base.s3.amazonaws.com/k8s-dashboard.zip --output /home/ubuntu/k8s-dashboard.zip",
+								"unzip /home/ubuntu/k8s-dashboard.zip -d /home/ubuntu/",
+								"sudo chmod +x /home/ubuntu/k8s-dashboard/dashboard.sh",
+								"sudo ln -s /home/ubuntu/k8s-dashboard/dashboard.sh /usr/local/bin/dashboard",
+								"sudo kubectl get all -A -o wide",
+								"sudo rm /home/ubuntu/k8s-dashboard.zip",
+								"sudo rm -Rf /home/ubuntu/__MACOSX",
+								"touch /home/ubuntu/refresh-token.sh",
+								"sudo chmod +x /home/ubuntu/refresh-token.sh",
+								"echo 'kubeadm token delete `cat /var/www/html/token`' >> /home/ubuntu/refresh-token.sh",
+								"echo 'kubeadm token create | sudo tee /var/www/html/token' >> /home/ubuntu/refresh-token.sh",
+								"crontab -l > /tmp/tmpcrontab",
+								"echo '0 0 * * * /home/ubuntu/refresh-token.sh' >> /tmp/tmpcrontab",
+								"crontab /tmp/tmpcrontab",
+								"echo '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-'",
+								"echo '-=-=-=-=-=- end of script -=-=-=-=-=-'",
+								"echo '-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-'"
+							]
+						]
+					}
+				}
+			}
+		},
+		"K8sMasterEni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "SecurityGroup"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PrivateSub1"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-K8sMasterEni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				]
+			}
+		},
+		"K8sWorkerLaunchTemplate": {
+			"Type": "AWS::EC2::LaunchTemplate",
+			"Properties": {
+				"LaunchTemplateName": {
+					"Fn::Join": [
+						"",
+						[
+							{
+								"Ref": "AWS::StackName"
+							},
+							"-K8sWorkerLaunchTemplate"
+						]
+					]
+				},
+				"LaunchTemplateData": {
+					"IamInstanceProfile": {
+						"Arn": {
+							"Fn::GetAtt": [
+								"InstanceProfile",
+								"Arn"
+							]
+						}
+					},
+					"ImageId": {
+						"Fn::GetAtt": [
+							"RunImageFunction2",
+							"ami"
+						]
+					},
+					"InstanceType": {
+						"Ref": "K8sInstanceType"
+					},
+					"KeyName": {
+						"Ref": "KeyPair"
+					},
+					"SecurityGroupIds": [
+						{
+							"Ref": "SecurityGroup"
+						}
+					],
+					"UserData": {
+						"Fn::Base64": {
+							"Fn::Join": [
+								"\n",
+								[
+									"#!/bin/bash",
+									"sudo swapoff -a",
+									"echo 90 > /proc/sys/vm/swappiness ",
+									"sudo apt-get -y update",
+									"sudo apt-get install -y net-tools docker.io apt-transport-https ca-certificates curl",
+									"sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg",
+									"echo 'deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main' | sudo tee /etc/apt/sources.list.d/kubernetes.list",
+									"sudo apt-get -y update",
+									"sudo apt-get install -y kubelet=1.20.8-00 kubeadm=1.20.8-00 kubectl=1.20.8-00",
+									"sudo apt-mark hold kubelet kubeadm kubectl",
+									"mkdir -p /home/ubuntu/.kube",
+									{
+										"Fn::Sub": [
+											"K8sMasterIp=${K8sMasterIp}",
+											{
+												"K8sMasterIp": {
+													"Fn::GetAtt": [
+														"K8sMasterEni0",
+														"PrimaryPrivateIpAddress"
+													]
+												}
+											}
+										]
+									},
+									"curl $K8sMasterIp/config > /home/ubuntu/.kube/config",
+									"sudo chown $(id -u ubuntu):$(id -g ubuntu) /home/ubuntu/.kube/config",
+									"sudo kubeadm join $K8sMasterIp:6443 --token `curl $K8sMasterIp/token` --discovery-token-ca-cert-hash sha256:`curl $K8sMasterIp/hash`",
+									"echo '-=-=-=-=-=- end of script -=-=-=-=-=-'"
+								]
+							]
+						}
+					}
+				}
+			}
+		},
+		"K8sWorkerAutoScaleGroup": {
+			"Type": "AWS::AutoScaling::AutoScalingGroup",
+			"Properties": {
+				"MinSize": "0",
+				"MaxSize": "0",
+				"DesiredCapacity": "0",
+				"LaunchTemplate": {
+					"LaunchTemplateId": {
+						"Ref": "K8sWorkerLaunchTemplate"
+					},
+					"Version": {
+						"Fn::GetAtt": [
+							"K8sWorkerLaunchTemplate",
+							"LatestVersionNumber"
+						]
+					}
+				},
+				"VPCZoneIdentifier": [
+					{
+						"Ref": "PrivateSub1"
+					},
+					{
+						"Ref": "PrivateSub2"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-K8sWorker"
+								]
+							]
+						},
+						"PropagateAtLaunch": "true"
+					}
+				]
+			}
+		},
+		"LambdaRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"lambda.amazonaws.com"
+								]
+							},
+							"Action": [
+								"sts:AssumeRole"
+							]
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "S3AccessRole",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"s3:PutObject",
+										"ec2:DescribeImages"
+									],
+									"Resource": "*"
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"logs:*"
+									],
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"ImageFunction": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"Code": {
+					"ZipFile": {
+						"Fn::Join": [
+							"\n",
+							[
+								"import boto3",
+								"import cfnresponse",
+								"import logging",
+								"import json",
+								"logger = logging.getLogger()",
+								"logger.setLevel(logging.INFO)",
+								"client = boto3.client('ec2')",
+								"",
+								"def handler(event, context):",
+								"    if event['RequestType'] == 'Create':",
+								"        logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"    else:",
+								"        responseData = {'msg':'200'}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"        return None",
+								"",
+								"    try:",
+								"        resp = client.describe_images(",
+								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}],",
+								"            Owners=['679593333241', '464423754048', '211372476111', '345084742485', '874634375141']",
+								"        )",
+								"    except Exception as error:",
+								"        logger.error('<--!! Exception: {}'.format(error))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"",
+								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200 and resp['Images'] != []:",
+								"        ami_dict = {}",
+								"        ami_list = []",
+								"        for entry in resp['Images']:",
+								"            key = entry['CreationDate']",
+								"            ami_dict[key] = entry['ImageId']",
+								"        ami_list = sorted(ami_dict, reverse = True)",
+								"        logger.info('--> found latest AMI: {}, {}'.format(ami_dict[ami_list[0]], ami_list[0]))",
+								"        responseData = {'ami': ami_dict[ami_list[0]]}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"    else:",
+								"        logger.error('!!--> Unable to find AMI in response! {}'.format(resp))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								""
+							]
+						]
+					}
+				},
+				"Role": {
+					"Fn::GetAtt": [
+						"LambdaRole",
+						"Arn"
+					]
+				},
+				"Timeout": 120,
+				"Handler": "index.handler",
+				"Runtime": "python3.8",
+				"MemorySize": 128
+			}
+		},
+		"RunImageFunction1": {
+			"Type": "Custom::ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": {
+					"Fn::If": [
+						"FortiGateLicenseTypeBYOL",
+						"FortiGate-VM64-AWS *(6.4.*)*",
+						"FortiGate-VM64-AWSONDEMAND *(6.4.*)*"
+					]
+				}
+			}
+		},
+		"RunImageFunction2": {
+			"Type": "Custom::ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2021*"
+			}
+		},
+		"RunImageFunction3": {
+			"Type": "Custom::ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": {
+					"Fn::If": [
+						"FortiADCLicenseTypeBYOL",
+						"FADC-AWS-BYOL-6.0.*",
+						"FADC-AWS-PAYG-1gbps-6.0.*"
+					]
+				}
+			}
+		},
+		"InitFunction": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"Code": {
+					"ZipFile": {
+						"Fn::Join": [
+							"\n",
+							[
+								"import ast",
+								"import boto3",
+								"import cfnresponse",
+								"import json",
+								"import logging",
+								"logger = logging.getLogger()",
+								"logger.setLevel(logging.INFO)",
+								"s3 = boto3.client('s3')",
+								"",
+								"template = '''\\",
+								"config system global",
+								"set hostname Fgt",
+								"set admintimeout 60",
+								"end",
+								"config system settings",
+								"set gui-load-balance enable",
+								"set gui-advanced-policy enable",
+								"set gui-allow-unnamed-policy enable",
+								"end",
+								"config system interface",
+								"edit port1",
+								"set alias public",
+								"set mode dhcp",
+								"set allowaccess ping https ssh",
+								"next",
+								"edit port2",
+								"set alias private",
+								"set mode dhcp",
+								"set allowaccess ping",
+								"set mtu-override enable",
+								"set mtu 9001",
+								"set defaultgw disable",
+								"set dns-server-override disable",
+								"next",
+								"end",
+								"config router static",
+								"edit 1",
+								"set dst {VPCCIDR}",
+								"set device port2",
+								"set dynamic-gateway enable",
+								"next",
+								"end",
+								"config firewall vip",
+								"edit k8s-master-ssh",
+								"set mappedip {K8sMasterIp}",
+								"set extintf port1",
+								"set portforward enable",
+								"set extport 221",
+								"set mappedport 22",
+								"next",
+								"edit k8s-dashboard",
+								"set mappedip {K8sMasterIp}",
+								"set extintf port1",
+								"set portforward enable",
+								"set extport 8443",
+								"set mappedport 32767",
+								"next",
+								"end",
+								"config firewall policy",
+								"edit 1",
+								"set name outbound-all",
+								"set srcintf port2",
+								"set dstintf port1",
+								"set srcaddr all",
+								"set dstaddr all",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set logtraffic all",
+								"set nat enable",
+								"next",
+								"edit 2",
+								"set name inbound-k8s-master",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr k8s-master-ssh k8s-dashboard",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set logtraffic all",
+								"next",
+								"end",
+								"config system sdn-connector",
+								"edit aws-instance-role",
+								"set status enable",
+								"set type aws",
+								"set use-metadata-iam enable",
+								"next",
+								"end\\",
+								"'''",
+								"",
+								"def handler(event, context):",
+								"    logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"    dict1 = ast.literal_eval(event['ResourceProperties']['FgtInfo'])",
+								"    Fgt_conf = template.format(**dict1)",
+								"    Fgt_result = False",
+								"",
+								"    try:",
+								"        resp = s3.put_object(Body=Fgt_conf, Bucket=event['ResourceProperties']['S3Bucket'], Key='Fgt.txt')",
+								"    except Exception as error:",
+								"        logger.error('<--!! Exception: {}'.format(error))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200:",
+								"        Fgt_result = True",
+								"        logger.info('<-- s3 put_object Fgt.txt successful')",
+								"",
+								"    if Fgt_result is True:",
+								"        responseData = {'msg':'200'}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"    else:",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								""
+							]
+						]
+					}
+				},
+				"Role": {
+					"Fn::GetAtt": [
+						"LambdaRole",
+						"Arn"
+					]
+				},
+				"Timeout": 120,
+				"Handler": "index.handler",
+				"Runtime": "python3.8",
+				"MemorySize": 128
+			}
+		},
+		"RunInitFunction": {
+			"Type": "Custom::InitFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"InitFunction",
+						"Arn"
+					]
+				},
+				"S3Bucket": {
+					"Ref": "InitS3Bucket"
+				},
+				"FgtInfo": {
+					"Fn::Join": [
+						"",
+						[
+							"{",
+							"'VPCCIDR':'",
+							{
+								"Ref": "VPCCIDR"
+							},
+							"',",
+							"'K8sMasterIp':'",
+							{
+								"Fn::GetAtt": [
+									"K8sMasterEni0",
+									"PrimaryPrivateIpAddress"
+								]
+							},
+							"'",
+							"}"
+						]
+					]
+				}
+			}
+		}
+	},
+	"Outputs": {
+		"FgtUsername": {
+			"Value": "admin",
+			"Description": "Username for the Fortigate"
+		},
+		"FgtPassword": {
+			"Value": {
+				"Ref": "Fgt"
+			},
+			"Description": "Initial password for the FortiGate"
+		},
+		"FgtLoginURL": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "FgtEIP"
+						}
+					]
+				]
+			},
+			"Description": "Login URL for theFortiGate"
+		},
+		"FadcUsername": {
+			"Value": "admin",
+			"Description": "Username for the FortiADC"
+		},
+		"FadcPassword": {
+			"Value": {
+				"Ref": "Fadc"
+			},
+			"Description": "Initial password for the FortiADC"
+		},
+		"FadcLoginURL": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "FadcEIP"
+						}
+					]
+				]
+			},
+			"Description": "Login URL for the FortiADC"
+		},
+		"FadcVirtualServerURL": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"http://",
+						{
+							"Ref": "FadcEIP2"
+						}
+					]
+				]
+			},
+			"Description": "Second EIP for Virtual Server"
+		},
+		"K8sDashboardLoginURL": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "FgtEIP"
+						},
+						":8443"
+					]
+				]
+			},
+			"Description": "Login URL for Kubernetes Dashboard"
+		},
+		"K8sMasterSSH": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"ssh -i your-key-pair -p 221 ubuntu@",
+						{
+							"Ref": "FgtEIP"
+						}
+					]
+				]
+			},
+			"Description": "SSH access for Kubernetes Master"
+		}
+	}
+}
