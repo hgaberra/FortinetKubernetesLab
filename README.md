@@ -4,7 +4,7 @@
 ## Table of Contents
   - [Overview](./README.md#overview)
   - [Solution Components](./README.md#solution-components)
-  - [Deployment](./README.md#deployment)
+  - [Template Deployment](./README.md#template-deployment)
   - [Getting Started](./README.md#getting-started)
   - [FortiGate](./README.md#FortiGate)
   - [FortiADC](./README.md#FortiADC)
