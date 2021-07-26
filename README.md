@@ -45,13 +45,13 @@ The K8s master is provisioned with Calico as the CNI plugin to manage IPAM for t
 The high-level building blocks for networking within Kubernetes are:
   - namespace:  This is a logical copy of the networking stack on a node with its own routes, interfaces, and other objects.
   - pod:  A group of one or more containers sharing the same resources (ie namespace, storage, cgroups, etc).  This is the smallest form of compute in Kubernetes.
-  - daemon set: A set of pods that will be ran on every node within a cluster.  Typically you will see this with CNI plugins and parts of the FortiCWP Kubernetes agent.
+  - daemon set: A set of pods that will be ran on every node within a cluster.  Typically, you will see this with CNI plugins and parts of the FortiCWP Kubernetes agent.
   - veth:  A virtual ethernet interface that can act as a tunnel between network namespaces.  This is commonly used to connect pod namespaces to the host namespace.
   - kube-proxy:  A network proxy (that uses host packet filtering, ie iptables, ebpf, etc) that runs on every node within the cluster.  This proxy implements services that allow pods to be easily accessible within or outside of the cluster.  Here are some common service types:
     * ClusterIP:  This is a service (think Virtual IP) that is only accessible within the cluster.  When traffic is received on the ClusterIP, kube-proxy will then DNAT the traffic to the backend endpoint such as a pod tied to the service.
     * NodeIp:  This is a service that is externally available on every node in the cluster on a dedicated node port, (ie tcp://nodeIp:nodePort).  Once traffic is received on the nodePort, kube-proxy will match the traffic to the internal clusterIP for the same service which ultimately delivers the traffic to the endpoints of the service.
     * LoadBalancer: This is a service that is externally available with public cloud load balancing services.  The load balancer will typically target a nodePort service for health checks and delivering traffic to the pods tied to the service.
-  - Ingress-Controller:  When exposing HTTP(S) applications, you caan use a ingress object which has a separate controller monitoring the cluster for these ingress objects.  The controller will then provision access through another solution (such as nginx, haproxy, etc) to expose the application and provide additional services such as security.
+  - Ingress-Controller:  When exposing HTTP(S) applications, you can use an ingress object which has a separate controller monitoring the cluster for these ingress objects.  The controller will then provision access through another solution (such as nginx, haproxy, etc) to expose the application and provide additional services such as security.
   - CNI:  A container network interface plugin that handles the IPAM and network setup of pods, services, etc and integrates with kube-proxy.  Additionally, the CNI plugin can provide other services such as Calico managing Kubernetes network policies as well to isolate namespaces from each other.
 
 Here is a high-level diagram showing a 2 node cluster with the Calico CNI plugin.
@@ -402,5 +402,107 @@ After a few more minutes, navigate to Overview > Container Visibility > select y
 ![example output](./content/output42.png)
 ![example output](./content/output43.png)
 
+Next, we will configure CWP to inspect container images that are stored in a ECR repo.  To begin with, we need to configure CWP with the credentials to authenticate with the ECR registry and pull images out of a private repo.
+
+In FortiCWP navigate to Configure > Credential Store > Add New.  Then enter in your account ID, select 'Manually by myself' for IAM Role Creation Method, and select 'Generate' for the External ID and copy the value as we will need to configure our IAM role with this.
+
+![example output](./content/output44.png)
+
+In the CloudFormation outputs reference 'CwpCgRole' and navigate to the IAM Console > Access Management > Roles and search for the same role.
+
+![example output](./content/output45.png)
+
+Then select the role, go to the 'Trust relationships' tab and select 'Edit trust relationship'.  This will open the JSON formatted policy document in a text editor.  Update the value for 'sts:ExternalId' to the External ID value from the FortiCWP console and save your changes.
+
+![example output](./content/output46.png)
+
+Back in the FortiCWP console, select next step and provide the IAM Role ARN which can be gathered from the IAM console or the CloudFormation outputs and select add IAM role.
+
+![example output](./content/output47.png)
+
+Next select add registry and use the CloudFormation outputs to get the ECR Registry URL and Repo name.  Then select your IAM Role you just added and also your K8s cluster where the images will be scanned.
+
+![example output](./content/output48.png)
+
+After some time, you will see a few example images that have been uploaded to the repo with their risk score and detailed vulnerability report.
+
+![example output](./content/output49a.png)
+![example output](./content/output49b.png)
+
+Using the CloudFormation outputs, login to the Jenkins host via the gui and also ssh.  Then run the command below to get the initial admin password.
+
+	sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+Next you will be prompted to install plugins so select 'Install suggested plugins' and wait for all recommended plugins to install successfully.
+
+![example output](./content/output50.png)
+
+Then you will be prompted to create the first admin user and then to set the access URL which the default selection should be accepted (ie http://fgt-eip:port8080).
+
+![example output](./content/output51.png)
+![example output](./content/output52.png)
+
+Now on the Jenkins dashboard, select Manage Jenkins > Manage Plugins > Available and search for 'docker' and install the plugin without restart.
+
+![example output](./content/output53.png)
+
+Once that has completed, go back to Manage Jenkins > Manage Plugins > Available and search for 'forticwp' and install the plugin without restart as well.
+
+![example output](./content/output54.png)
+
+In the FortiCWP console go to Configure > Kubernetes Cluster > Actions > View CI\CD Integration Configurations.  We will use this value in configuring the FortiCWP plugin in Jenkins. 
+
+![example output](./content/output55.png)
+![example output](./content/output56.png)
+
+In the Jenkins console go to Manage Jenkins > Configure System and find the FortiCWP CICI Integration Configuration section.  Then copy and paste the access token and make sure your region matches what is shown in FortiCWP and select 'Verify Settings' to process the configuration.  Then select save at the bottom of the screen to apply the settings.
+
+![example output](./content/output57.png)
+
+In the FortiCWP console go to Policy Config > CI/CD Integration.  For your Jenkins Url, use the FortiGate EIP and port 8080, then give your project a name. Finally check the box on critical vulnerabilities and leave the value at 1. 
+
+ - *** Note *** that your Jenkins Project name should match what is used in Jenkins in the next step.
+
+![example output](./content/output58.png)
+
+Go back to the Jenkinis dashboard and select 'New Item' on the left navigation panel, then give your project the same name as you did in the FortiCWP console, select 'Freestyle project' then ok.
+
+![example output](./content/output59.png)
+
+On the next page scroll down to the build section and click add build step then execute shell.  Then you can copy and paste the code snippet below into the text box.  Finally add another build setup with 'Scan container images', enter 'demo_build:latest' as the value and check the box for 'Fail the build if result is not compliant'.
+
+	echo '=---> some context <---='
+	whoami
+	pwd
+	ls -lA
+	echo $WORKSPACE
+	docker image ls
+	echo '=---> create docker file <---='
+	rm -rf $WORKSPACE/
+	mkdir -p $WORKSPACE/
+	cd $WORKSPACE/
+	ls -lA
+	touch DockerFile
+	echo 'FROM ubuntu:18.04' >> DockerFile
+	echo 'RUN apt-get update && apt-get install -y redis-server && apt-get clean' >> DockerFile
+	echo 'EXPOSE 6379' >> DockerFile
+	echo 'CMD ["redis-server", "--protected-mode no"]' >> DockerFile
+	echo '=---> create docker container with base image and layers <---='
+	ls -lA
+	cat DockerFile
+	docker build -f DockerFile -t demo_build:latest .
+
+![example output](./content/output60.png)
+![example output](./content/output61.png)
+
+On the project page select Build Now and in a few seconds, you should see the an entry in your build history.  Click on that and select console output on the next page to watch the build process including the FortiCWP plugin running the image scan and failing the build.
+
+![example output](./content/output62.png)
+![example output](./content/output63.png)
+
+In the FortiCWP console go to FortiView > CI/CD Integration > select the build under your project 'demo_project' and you can see that FortiCWP block this build from passing due to vulnerabilities.  You can click on the detailed report on the right to see more information for that image scan.
+
+![example output](./content/output64.png)
+![example output](./content/output65.png)
 ----
 
