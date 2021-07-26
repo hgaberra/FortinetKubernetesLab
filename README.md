@@ -426,8 +426,8 @@ Next select add registry and use the CloudFormation outputs to get the ECR Regis
 
 After some time, you will see a few example images that have been uploaded to the repo with their risk score and detailed vulnerability report.
 
-![example output](./content/output49a.png)
-![example output](./content/output49b.png)
+![example output](./content/output49-1.png)
+![example output](./content/output49-2.png)
 
 Using the CloudFormation outputs, login to the Jenkins host via the gui and also ssh.  Then run the command below to get the initial admin password.
 
