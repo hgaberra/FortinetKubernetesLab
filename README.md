@@ -442,11 +442,7 @@ Then you will be prompted to create the first admin user and then to set the acc
 ![example output](./content/output51.png)
 ![example output](./content/output52.png)
 
-Now on the Jenkins dashboard, select Manage Jenkins > Manage Plugins > Available and search for 'docker' and install the plugin without restart.
-
-![example output](./content/output53.png)
-
-Once that has completed, go back to Manage Jenkins > Manage Plugins > Available and search for 'forticwp' and install the plugin without restart as well.
+Now on the Jenkins dashboard, go to Manage Jenkins > Manage Plugins > Available and search for 'forticwp' and install the plugin without restart.
 
 ![example output](./content/output54.png)
 
