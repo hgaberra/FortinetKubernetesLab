@@ -134,9 +134,9 @@ To get information about the cluster nodes, core & CNI plugin components, we can
 
     kubectl get nodes
     kubectl get nodes -o wide
-    sudo kubectl get all -A
-    sudo kubectl get all -A -o wide
-    sudo kubectl get all -n calico-system	
+    kubectl get all -A
+    kubectl get all -A -o wide
+    kubectl get all -n calico-system	
 
   - What information do you get from get nodes or get all with the '-o wide' option that is interesting?
   - What types of resources do you see with the get all command (ie pods, services, daemon sets, replica sets)?
@@ -146,7 +146,7 @@ Run the commands below to deploy the Kubernetes dashboard and dump admin and rea
 
     dashboard status
     dashboard start
-    sudo kubectl get all -n kubernetes-dashboard -o wide
+    kubectl get all -n kubernetes-dashboard -o wide
 
 Using the CloudFormation outputs, login to both the FortiGate and K8s dashboard and use the tokens dumped from the previous commands to login.
 
@@ -159,7 +159,7 @@ In this section we will be configuring the SDN connector on the FortiGate to use
 On the K8s master, run the commands below to deploy the hostnames deployment which serves up the pod hostname over http.
 
     kubectl apply -f https://hacorp-base.s3.amazonaws.com/k8s-hostnames.yaml
-    sudo kubectl get all -n hostnames-ns -o wide
+    kubectl get all -n hostnames-ns -o wide
     kubectl describe node `hostname` | grep Taints
 
 At this point you will notice the pod/hostnames is in pending status since by default pods are only scheduled to run on worker nodes.
@@ -176,7 +176,7 @@ On the K8s master, run the command below and wait until the worker node joins th
 
 Stop the watch with ctrl-c and then run the command below to see the pod/hostnames running along with the other components of the namespace.
 
-    sudo kubectl get all -n hostnames-ns -o wide
+    kubectl get all -n hostnames-ns -o wide
 
   - What node is the pod/hostnames running on now?
 
@@ -267,7 +267,7 @@ Then go to Policy & Objects > Health Check > Create New.  Provide a name, set th
 ![example output](./content/output11.png)
 
     kubectl get service -n hostnames-ns
-    sudo kubectl get all -n hostnames-ns
+    kubectl get all -n hostnames-ns
 
 ![example output](./content/output12.png)
 
