@@ -63,14 +63,14 @@ Here is a similar diagram showing the same cluster but using the AWS VPC CNI plu
 ![VPC CNI](./content/aws-vpc-cni.png)
 
 Below are reference documentation and videos for a deeper dive on Kubernetes networking:
-[K8s Networking on AWS](https://www.youtube.com/watch?v=7LRtytR6ZbA)
-[K8s Services](https://www.youtube.com/watch?v=NFApeJRXos4)
-[K8s Ingress Networking](https://www.youtube.com/watch?v=40VfZ_nIFWI)
-[K8s Service Types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
-[K8s Ingress Networking](https://kubernetes.io/docs/concepts/services-networking/ingress/)
-[K8s Ingress Controllers](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/)
-[EKS Pod Networking](https://docs.aws.amazon.com/eks/latest/userguide/pod-networking.html )
-[AWS VPC CNI](https://github.com/aws/amazon-vpc-cni-K8s)
+  - [K8s Networking on AWS](https://www.youtube.com/watch?v=7LRtytR6ZbA)
+  - [K8s Services](https://www.youtube.com/watch?v=NFApeJRXos4)
+  - [K8s Ingress Networking](https://www.youtube.com/watch?v=40VfZ_nIFWI)
+  - [K8s Service Types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
+  - [K8s Ingress Networking](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+  - [K8s Ingress Controllers](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/)
+  - [EKS Pod Networking](https://docs.aws.amazon.com/eks/latest/userguide/pod-networking.html )
+  - [AWS VPC CNI](https://github.com/aws/amazon-vpc-cni-K8s)
 
 The SDN connector accesses Kubernetes control plain which uses role-based access for authentication.  An RBAC Role or ClusterRole contains rules that represent a set of permissions on resources.  The main difference between the two roles is that Roles are bound to a namespace while ClusterRoles are not.  Generally, FortiXYZ products will use ClusterRoles to access deployments across multiple namespaces.
 
@@ -86,10 +86,10 @@ Finally, tokens can be pulled from secrets tied to subjects to get credentials f
 When working with managed K8s clusters such as EKS, AKS, and GKE, config maps are typically used to map cloud provider IAM roles to K8s users\groups.  This will be used when integrating CWP with managed K8s clusters in EKS.
 
 Below are reference documentation for a deeper dive on Kubernetes RBAC:
-[K8s RBAC](https://Kubernetes.io/docs/reference/access-authn-authz/rbac/)
-[K8s Authorization](https://Kubernetes.io/docs/reference/access-authn-authz/authorization/)
-[EKS add user role](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html)
-[FortiCWP ConfigMap for EKS](https://docs.fortinet.com/document/forticwp/21.2.0/online-help/698697/add-iam-role-to-Kubernetes-configmap)
+  - [K8s RBAC](https://Kubernetes.io/docs/reference/access-authn-authz/rbac/)
+  - [K8s Authorization](https://Kubernetes.io/docs/reference/access-authn-authz/authorization/)
+  - [EKS add user role](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html)
+  - [FortiCWP ConfigMap for EKS](https://docs.fortinet.com/document/forticwp/21.2.0/online-help/698697/add-iam-role-to-Kubernetes-configmap)
 
 ## Template Deployment
 Before attempting to create a stack with the template, a few prerequisites should be checked to ensure a successful deployment:
@@ -239,7 +239,7 @@ subjects:
 
 Then use kubectl to create the items in the file and finally gather the authentication token with the commands below.
 
-    kubectl apply -f 'name-of-your-file.yaml'
+    kubectl apply -f 'fortinet-sdn-connector.yaml'
     kubectl get secrets -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='fortinet-sdn-connector')].data.token}"| base64 --decode
 
 ![example output](./content/output5.png)
@@ -248,7 +248,7 @@ Login to the FortiGate and go to Security Fabric > External Connectors > Create 
 
 ![example output](./content/output6.png)
 
-Once you have saved the configuration, you should see a green arrow pointing up on the K8s connector you created.  Click on the connector and then select 'View Connector Objects' in the pop-up window to see metadata you can use.
+Once you have saved the configuration, you should see a green arrow pointing up on the K8s connector you created.  Right click on the connector and then select 'View Connector Objects' in the pop-up window to see metadata you can use.
 
 ![example output](./content/output7.png)
 ![example output](./content/output8.png)
@@ -292,7 +292,7 @@ As you generate traffic to the EIP of the FortiGate on your unique port you shou
 
 In this section we will be configuring the SDN connector on the FortiADC to dynamically resolve endpoints registered to a K8s service along with a virtual server to provide secured ingress access to an application on our K8s cluster.
 
-Login to the FortiADC using the CloudFormation outputs and go to Network > Interface.  Edit port2 and set the mode to DHCP and save the settings.  If you refresh the interfaces page you should see port2 pull an IP via DHCP.
+Login to the FortiADC using the CloudFormation outputs, cancel out of the 'System Getting Started Wizard', and go to Network > Interface.  Edit port2 and set the mode to DHCP and save the settings.  If you refresh the interfaces page you should see port2 pull an IP via DHCP.
 
 ![example output](./content/output18.png)
 
@@ -302,34 +302,32 @@ Next navigate to Network > Routing and create a new static route.  With the defa
 
 To configure the SDN connector navigate to Security Fabric > External Connectors > Create New.  Then provide the same IP address, port, and token information that was used for the FortiGate SDN Connector.  You can use the commands below.
 
-![example output](./content/output20.png)
-
     kubectl cluster-info
     kubectl get secrets -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='fortinet-sdn-connector')].data.token}"| base64 --decode
 
-Let's create a health check by navigating to Shared Resources > Health Check and create a new one.
+![example output](./content/output20.png)
 
-![example output](./content/output21.png)
-
-For the port, provide the nodePort for the hostnames-svc service.  You can use the command below to get the relevant information about the hostnames-svc in the hostnames-ns namespace.
+Let's create a health check by navigating to Shared Resources > Health Check and create a new one.  For the port, provide the nodePort for the hostnames-svc service.  You can use the command below to get the relevant information about the hostnames-svc in the hostnames-ns namespace.
 
     kubectl get service -n hostnames-ns
 
 ![example output](./content/output12.png)
 
+![example output](./content/output21.png)
+
 Next, create a NAT source pool by going to Server Load Balance > Virtual Server > NAT Source Pool > Create New.  Specify port2 as the interface and in the EC2 console, grab the secondary IP assigned to ENI1 of FortiADC.
+
+  - FortiADC does not allow using the primary IPs of interfaces in NAT Source Pools configuration, so we assigned secondary IPs to the EC2 Instance.
 
 ![example output](./content/output22.png)
 ![example output](./content/output23.png)
 
-  - FortiADC does not allow using the primary IPs of interfaces in NAT Source Pools configuration, so we assigned secondary IPs to the EC2 Instance.
-
 Next, create the real server pool by navigating to Server Load Balance > Real Server Pool > Create New.  For the type select dynamic, select your SDN Connector, select the hostnames-svc service and select your health check.  Save the virtual server and edit it again and FortiADC should retrieve the nodes supporting the currently deployed service.
+
+  - Notice how FortiADC dynamically resolve the nodes and nodePort to use for this service.
 
 ![example output](./content/output24.png)
 ![example output](./content/output25.png)
-
-  - Notice how FortiADC dynamically resolve the nodes and nodePort to use for this service.
 
 Finally go to Server Load Balance > Virtual Server > Create New > Advanced.  On the 'Basic' tab, name the virtual server and set the 'Packet Forwarding Method' to 'Full NAT' and select the NAT source pool you previously created.  On the 'General' tab specify the secondary IP of ENI0 as the address for the virtual server and set a unique port.  Then on the 'Monitoring' tab enable both 'Traffic Log' and 'Fortiview' and save the virtual server config.
 
@@ -338,7 +336,7 @@ Finally go to Server Load Balance > Virtual Server > Create New > Advanced.  On 
 ![example output](./content/output28.png)
 ![example output](./content/output29.png)
 
-Now you can see a live view of the real server pool by going to FortiView > SLB Logical Topology.  
+Now you can see a live view of the real server pool by going to FortiView > Logical Topology.  
 
 ![example output](./content/output30.png)
 
@@ -377,12 +375,12 @@ Next, navigate to Configure > Kubernetes Cluster > Add New.  The easiest and fas
 ![example output](./content/output36.png)
 ![example output](./content/output37.png)
 
-You can run the commands below with your unique token to deploy the FortiCWP Kubernetes Agents.
+You can run the commands below with your unique token to deploy the FortiCWP Kubernetes Agents and watch the pods eventually go into running status.
 
-    curl https://forticwp-kubernetes-agent.s3-us-west-2.amazonaws.com/linux/fcli --output fcli
+    curl https://forticwp-kubernetes-agent.s3.amazonaws.com/linux/fcli --output fcli
     chmod +x fcli
     ./fcli deploy kubernetes --token <-your-cwp-token-> --region global
-    watch kubectl get podss -n fortinet
+    watch kubectl get pods -n fortinet
 
 ![example output](./content/output38.png)
 

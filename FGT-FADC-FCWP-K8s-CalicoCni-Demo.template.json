@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v1.0) AWS CFT to deploy a VPC with 2 subnets (Public, Private) across 2x Availability Zones.",
+	"Description": "(v1.6) AWS CFT to deploy a VPC with 2 subnets (Public, Private) across 2x Availability Zones.",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -557,10 +557,64 @@
 				"GroupDescription": "SecurityGroup",
 				"SecurityGroupIngress": [
 					{
-						"Description": "Allow remote access",
-						"IpProtocol": "-1",
-						"FromPort": "0",
-						"ToPort": "65535",
+						"Description": "Allow remote access - ICMP",
+						"IpProtocol": "icmp",
+						"FromPort": "-1",
+						"ToPort": "-1",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow remote access - SSH",
+						"IpProtocol": "tcp",
+						"FromPort": "22",
+						"ToPort": "22",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow remote access - SSH NS Port",
+						"IpProtocol": "tcp",
+						"FromPort": "221",
+						"ToPort": "222",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow remote access - HTTP",
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow remote access - HTTPS",
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow remote access - HTTP NS Port",
+						"IpProtocol": "tcp",
+						"FromPort": "8080",
+						"ToPort": "8080",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow remote access - HTTPS NS Port",
+						"IpProtocol": "tcp",
+						"FromPort": "8443",
+						"ToPort": "8443",
 						"CidrIp": {
 							"Ref": "CIDRForInstanceAccess"
 						}
@@ -1815,8 +1869,8 @@
 				"LicenseType": {
 					"Fn::If": [
 						"FortiGateLicenseTypeBYOL",
-						"FortiGate-VM64-AWS *(6.4.*)*",
-						"FortiGate-VM64-AWSONDEMAND *(6.4.*)*"
+						"FortiGate-VM64-AWS *(7.0.*)*",
+						"FortiGate-VM64-AWSONDEMAND *(7.0.*)*"
 					]
 				}
 			}
@@ -1845,8 +1899,8 @@
 				"LicenseType": {
 					"Fn::If": [
 						"FortiADCLicenseTypeBYOL",
-						"FADC-AWS-BYOL-6.0.*",
-						"FADC-AWS-PAYG-1gbps-6.0.*"
+						"FADC-AWS-BYOL-6.2.*",
+						"FADC-AWS-PAYG-1gbps-6.2.*"
 					]
 				}
 			}
